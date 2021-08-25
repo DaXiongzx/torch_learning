@@ -12,9 +12,9 @@ dataLoader = DataLoader(dataset,batch_size=64)
 class Mynn(nn.Module):
     def __init__(self):
         super(Mynn,self).__init__()
-        self.conv1 = Conv2d(in_channels=3,out_channels=6,kernel_size=3,stride=1,padding=0)
+        self.conv1 = Conv2d(in_channels=3,out_channels=6,kernel_size=3,stride=1,padding=0) #相当于把Conv2d函数给了conv1
     def forward(self,x):
-        x = self.conv1(x)
+        x = self.conv1(x) #相当于调用Conv2d
         return x
 
 mynn = Mynn()
