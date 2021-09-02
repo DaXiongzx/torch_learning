@@ -2,12 +2,30 @@ import torchvision
 from torch.utils.data import DataLoader
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
+import torch
+# from src.model import *
 import time
-from src.model import *
-
 
 #准备数据集
 
+class Mynn(nn.Module):
+    def __init__(self):
+        super(Mynn,self).__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(3,32,5,1,2),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32,32,5,1,2),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32,64,5,1,2),
+            nn.MaxPool2d(2),
+            nn.Flatten(),
+            nn.Linear(64*4*4,64),
+            nn.Linear(64,10)
+        )
+
+    def forward(self,x):
+        x = self.model(x)
+        return x
 
 train_data = torchvision.datasets.CIFAR10(root="../dataset",train=True,transform=torchvision.transforms.ToTensor(),#PIL->tensor
                                           download=True)
@@ -26,10 +44,11 @@ test_dataloader = DataLoader(test_data,batch_size=64)
 
 #创建网络模型
 mynn = Mynn()
-mynn = mynn
+if torch.cuda.is_available():
+    mynn = mynn.cuda()
 
 #损失函数
-loss_fn = nn.CrossEntropyLoss()
+loss_fn = nn.CrossEntropyLoss().cuda()
 
 #优化器
 learning_rate = 1e-2
@@ -41,7 +60,7 @@ total_train_step = 0
 #记录测试的次数
 total_test_step = 0
 #训练的轮数
-epoch = 30
+epoch = 100
 total_loss = 0
 
 #添加tensorboard
@@ -53,6 +72,8 @@ for i in range(epoch):
     mynn.train()
     for data in train_dataloader:
         imgs,targets = data
+        imgs = imgs.cuda()
+        targets = targets.cuda()
         outputs = mynn(imgs)
         #print("outputs:{}",format(outputs))
         loss = loss_fn(outputs,targets)
@@ -65,7 +86,7 @@ for i in range(epoch):
         total_loss = total_loss + loss
         writer.add_scalar("train_loss",loss.item(),total_train_step)
     print("total_loss:{}".format(total_loss))
-    print("第{}轮花费的时间{}".format(i + 1, time.time() - start_time))
+    print("第{}轮花费的时间{}".format(i+1,time.time()-start_time))
     start_time = time.time()
     total_loss = 0
     #测试步骤
@@ -75,13 +96,15 @@ for i in range(epoch):
     with torch.no_grad():
         for data in test_dataloader:
             imgs,targets = data
+            imgs = imgs.cuda()
+            targets = targets.cuda()
             outputs = mynn(imgs)
             loss = loss_fn(outputs,targets)
             total_test_loss = total_test_loss+loss
             accuracy = (outputs.argmax(1)==targets).sum() #64个64个的比较
             total_accuracy = total_accuracy+accuracy
-    # print("整体测试集上的正确率：{}".format(total_accuracy/test_data_size))
-    # print("整体测试集上的loss：{}".format(total_test_loss))
+    print("整体测试集上的正确率：{}".format(total_accuracy/test_data_size))
+    print("整体测试集上的loss：{}".format(total_test_loss))
     # writer.add_scalar("test_loss", total_test_loss, total_test_step)
     # writer.add_scalar("accuracy", total_accuracy/test_data_size, total_test_step)
     # total_test_step = total_test_step+1
